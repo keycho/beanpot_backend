@@ -4,6 +4,9 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import routes from './api/routes';
+import statsRoutes from './api/stats-routes';
+import bettingRoutes from './api/betting-routes';
+import tokenRoutes from './api/token-routes';
 import { setupSocketHandlers } from './socket/handlers';
 import { startArenaLoop } from './arena/manager';
 import { ServerToClientEvents, ClientToServerEvents } from './types';
@@ -33,7 +36,10 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use('/api', routes);
+app.use('/api', routes);        // Core game routes
+app.use('/api', statsRoutes);   // Stats, queue, leaderboard
+app.use('/api', bettingRoutes); // Betting system
+app.use('/api', tokenRoutes);   // Token utility & staking
 
 // Setup socket handlers
 setupSocketHandlers(io);
@@ -42,7 +48,7 @@ setupSocketHandlers(io);
 const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
-  console.log(`🎮 BEANPOT server running on port ${PORT}`);
+  console.log(`🎮 IMPOSTAI server running on port ${PORT}`);
   console.log(`📡 WebSocket ready`);
   
   // Start AI Arena
