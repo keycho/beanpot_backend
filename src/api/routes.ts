@@ -11,7 +11,8 @@ router.get('/arena/current', async (req: Request, res: Response) => {
   try {
     const game = await db.getCurrentArenaGame();
     if (!game) {
-      return res.json({ game: null, message: 'No active arena game' });
+      res.json({ game: null, message: 'No active arena game' });
+      return;
     }
     
     const state = engine.getGameState(game.id);
@@ -36,26 +37,30 @@ router.post('/lobby/create', async (req: Request, res: Response) => {
 
 router.post('/lobby/:id/join', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { wallet_address } = req.body;
 
     if (!wallet_address) {
-      return res.status(400).json({ error: 'wallet_address required' });
+      res.status(400).json({ error: 'wallet_address required' });
+      return;
     }
 
     const state = engine.getGameState(id);
     if (!state) {
-      return res.status(404).json({ error: 'Lobby not found' });
+      res.status(404).json({ error: 'Lobby not found' });
+      return;
     }
 
     if (state.game.status !== 'waiting') {
-      return res.status(400).json({ error: 'Game already started' });
+      res.status(400).json({ error: 'Game already started' });
+      return;
     }
 
     // Check if player already in game
     const existing = state.players.find(p => p.wallet_address === wallet_address);
     if (existing) {
-      return res.status(400).json({ error: 'Already in this lobby' });
+      res.status(400).json({ error: 'Already in this lobby' });
+      return;
     }
 
     const player = await engine.addPlayerToGame(id, wallet_address, false);
@@ -96,27 +101,31 @@ router.get('/lobby/open', async (req: Request, res: Response) => {
 // Game action endpoints
 router.post('/game/:id/move', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { room, wallet_address } = req.body;
 
     if (!room || !ROOMS.includes(room)) {
-      return res.status(400).json({ error: 'Invalid room' });
+      res.status(400).json({ error: 'Invalid room' });
+      return;
     }
 
     const state = engine.getGameState(id);
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     const player = state.players.find(p => p.wallet_address === wallet_address);
     if (!player) {
-      return res.status(400).json({ error: 'Player not in game' });
+      res.status(400).json({ error: 'Player not in game' });
+      return;
     }
 
     const success = await engine.movePlayer(id, player.id, room as Room);
     
     if (!success) {
-      return res.status(400).json({ error: 'Invalid move' });
+      res.status(400).json({ error: 'Invalid move' });
+      return;
     }
 
     res.json({ success: true, room });
@@ -128,23 +137,26 @@ router.post('/game/:id/move', async (req: Request, res: Response) => {
 
 router.post('/game/:id/kill', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { wallet_address } = req.body;
 
     const state = engine.getGameState(id);
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     const player = state.players.find(p => p.wallet_address === wallet_address);
     if (!player) {
-      return res.status(400).json({ error: 'Player not in game' });
+      res.status(400).json({ error: 'Player not in game' });
+      return;
     }
 
     const success = await engine.attemptKill(id, player.id);
     
     if (!success) {
-      return res.status(400).json({ error: 'Cannot kill' });
+      res.status(400).json({ error: 'Cannot kill' });
+      return;
     }
 
     res.json({ success: true });
@@ -156,27 +168,31 @@ router.post('/game/:id/kill', async (req: Request, res: Response) => {
 
 router.post('/game/:id/chat', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { message, wallet_address } = req.body;
 
     if (!message || message.length > 200) {
-      return res.status(400).json({ error: 'Invalid message' });
+      res.status(400).json({ error: 'Invalid message' });
+      return;
     }
 
     const state = engine.getGameState(id);
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     const player = state.players.find(p => p.wallet_address === wallet_address);
     if (!player) {
-      return res.status(400).json({ error: 'Player not in game' });
+      res.status(400).json({ error: 'Player not in game' });
+      return;
     }
 
     const success = await engine.sendChat(id, player.id, message);
     
     if (!success) {
-      return res.status(400).json({ error: 'Cannot chat now' });
+      res.status(400).json({ error: 'Cannot chat now' });
+      return;
     }
 
     res.json({ success: true });
@@ -188,23 +204,26 @@ router.post('/game/:id/chat', async (req: Request, res: Response) => {
 
 router.post('/game/:id/vote', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { target_player_id, wallet_address } = req.body;
 
     const state = engine.getGameState(id);
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     const player = state.players.find(p => p.wallet_address === wallet_address);
     if (!player) {
-      return res.status(400).json({ error: 'Player not in game' });
+      res.status(400).json({ error: 'Player not in game' });
+      return;
     }
 
     const success = await engine.castVote(id, player.id, target_player_id);
     
     if (!success) {
-      return res.status(400).json({ error: 'Cannot vote' });
+      res.status(400).json({ error: 'Cannot vote' });
+      return;
     }
 
     res.json({ success: true });
@@ -216,11 +235,12 @@ router.post('/game/:id/vote', async (req: Request, res: Response) => {
 
 router.get('/game/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const state = engine.getGameState(id);
     
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     res.json({ state });
@@ -236,27 +256,32 @@ router.post('/bet/place', async (req: Request, res: Response) => {
     const { game_id, bet_type, pick, amount, wallet_address } = req.body;
 
     if (!game_id || !bet_type || !pick || !amount || !wallet_address) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
     }
 
     if (!['impostor', 'first_death'].includes(bet_type)) {
-      return res.status(400).json({ error: 'Invalid bet type' });
+      res.status(400).json({ error: 'Invalid bet type' });
+      return;
     }
 
     const state = engine.getGameState(game_id);
     if (!state) {
-      return res.status(404).json({ error: 'Game not found' });
+      res.status(404).json({ error: 'Game not found' });
+      return;
     }
 
     // Only allow betting before or during early game
     if (state.game.phase !== 'lobby' && state.game.round_number > 1) {
-      return res.status(400).json({ error: 'Betting closed for this game' });
+      res.status(400).json({ error: 'Betting closed for this game' });
+      return;
     }
 
     // Can't bet on game you're playing in
     const isPlayer = state.players.some(p => p.wallet_address === wallet_address);
     if (isPlayer) {
-      return res.status(400).json({ error: 'Cannot bet on your own game' });
+      res.status(400).json({ error: 'Cannot bet on your own game' });
+      return;
     }
 
     const bet = await db.createBet({
@@ -279,7 +304,7 @@ router.post('/bet/place', async (req: Request, res: Response) => {
 
 router.get('/bet/game/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const bets = await db.getGameBets(id);
     
     // Calculate odds based on bet distribution
